@@ -9,8 +9,8 @@ class HFClient:
 
     BASE_URL = "https://datasets-server.huggingface.co"
 
-    def __init__(self):
-        self.api = HfApi()
+    def __init__(self, hf_token):
+        self.api = HfApi(token=hf_token)
 
     # -------------------------------
     # Dataset Search & Metadata

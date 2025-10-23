@@ -1,11 +1,12 @@
 from openai import OpenAI
-from config import LLM_API_KEY, LLM_BASE_URL
+from config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 
 client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
 
 def chat_complete(prompt):
     response = client.chat.completions.create(
-        model="deepseek-chat",
+        model=LLM_MODEL,
+        temperature=0,
         messages=[
             {"role": "user", "content": prompt},
         ],
