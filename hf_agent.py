@@ -26,7 +26,7 @@ KEYWORDS: """
         
     return keywords
 
-def format_filter(row, legal_keys):
+def field_filter(row, legal_keys):
     example_text = """{'question': 'If an angle measures 120 degrees, what is its reference angle?', 'answer': 'The reference angle is found by subtracting ...', 'topic': 'Trigonometry Basics'}"""
     
     prompt = f"""You are a data field identifier that determines which fields in a JSON-like object represent the instruction's input and output.

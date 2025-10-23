@@ -4,7 +4,7 @@ from tqdm import tqdm
 import networkx as nx
 from pyvis.network import Network
 from hf_client import HFClient
-from hf_agent import keyword_extraction, instruction_judge, format_filter, solvable_judge
+from hf_agent import keyword_extraction, instruction_judge, field_filter, solvable_judge
 from config import HUGGINGFACE_TOKEN, TASK_DESCRIPTION
 
 logging.basicConfig(
@@ -47,7 +47,7 @@ for task_keyword in tqdm(task_keywords, desc="🔍 Searching keywords", unit="ke
             row = row["row"]
             print("Processing row:", row)
             legal_keys = row.keys()
-            fields = format_filter(str(row), legal_keys)
+            fields = field_filter(str(row), legal_keys)
             print("Filtered fields:", fields)
             if fields["input"] is None or fields["output"] is None:
                 print("Skipping row due to missing input/output fields.")
