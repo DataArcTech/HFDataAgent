@@ -78,6 +78,58 @@ Output:"""
         except:
             return {"input": None, "output": None}
 
+def format_conversion(input, output, input_format, output_format):
+    prompt = f"""You are a format conversion assistant that rewrites given input-output pairs from one format to another.
+
+### Task
+You are given:
+- **Original Input:** a user's instruction or question.
+- **Original Output:** the model's answer or completion.
+- **Input Format:** description of how the input is currently formatted.
+- **Output Format:** description of how it should be formatted after conversion.
+
+Your task:
+- Rewrite BOTH the input and output according to the new format.
+- Preserve the original meaning and intent.
+- Follow the target format conventions strictly (tone, structure, delimiters, etc.).
+- Do not add explanations, only provide the final formatted content.
+
+### Output format
+Return only a JSON object:
+{{
+  "input": "<rewritten input>",
+  "output": "<rewritten output>"
+}}
+
+---
+
+Original Input:
+{input}
+
+Original Output:
+{output}
+
+Input Format:
+{input_format}
+
+Output Format:
+{output_format}
+
+Return:
+"""
+    
+    output_text = chat_complete(prompt)
+    match = re.search(r'\{.*\}', output_text, re.S)
+    if match:
+        json_str = match.group().strip()
+        try:
+            result = json.loads(json_str)
+            return result
+        except:
+            return {"input": None, "output": None}
+    else:
+        return {"input": None, "output": None}
+
 
 def instruction_judge(task_description, instruction_sample):
     prompt = f"""You are an expert LLM evaluator for instruction-tuning datasets. Your goal is to assess how helpful and appropriate an instruction sample is for training a model on a specific task.
@@ -182,3 +234,105 @@ Return "True" if the model solved it correctly, otherwise return "False"."""
         return True
     else:
         return False
+    
+def data_generator_zero_shot(task_description, input_format, output_format):
+    prompt = f"""You are a data generation assistant that creates realistic and high-quality instruction data for fine-tuning language models.
+
+### Task
+Generate a **single** input-output pair based on the following description and format rules.
+
+---
+
+**Task Description:**
+{task_description}
+
+**Input Format:**
+{input_format}
+
+**Output Format:**
+{output_format}
+
+---
+
+### Requirements:
+1. The generated pair must be **original**, **plausible**, and consistent with the given task description.
+2. The **input** should follow the input format and represent a valid instruction or question for this task.
+3. The **output** should follow the output format and be a correct, helpful, and complete response to the input.
+4. Return only the final JSON object in this format:
+{{
+  "input": "<generated input>",
+  "output": "<generated output>"
+}}
+
+---
+
+Now generate one example:
+"""
+
+    output_text = chat_complete(prompt)
+
+    match = re.search(r'\{.*\}', output_text, re.S)
+    if match:
+        json_str = match.group().strip()
+        try:
+            result = json.loads(json_str)
+            return result
+        except:
+            return {"input": None, "output": None}
+    else:
+        return {"input": None, "output": None}
+
+def data_generator_few_shot(task_description, input_format, output_format, examples):
+    example_text = "\n\n".join(
+        [f"Example {i+1}:\nInput: {ex['input']}\nOutput: {ex['output']}" for i, ex in enumerate(examples)]
+    )
+
+    prompt = f"""
+You are a data generation assistant that creates diverse, realistic, and high-quality instruction data for fine-tuning large language models.
+
+### Task
+Generate a **single** input-output pair based on the task description and few-shot examples below.
+
+---
+
+**Task Description:**
+{task_description}
+
+**Input Format:**
+{input_format}
+
+**Output Format:**
+{output_format}
+
+**Few-shot Examples:**
+{example_text}
+
+---
+
+### Generation Rules:
+1. Create a new example that fits the same **task type** and **format** as the given examples.
+2. The new pair should be **original** — not a paraphrase or trivial variation.
+3. Keep **semantic consistency** with the task, but introduce diversity in topic, difficulty, or structure.
+4. The input and output must both follow the described formats.
+5. Return **only** the final JSON object in this format:
+{{
+  "input": "<generated input>",
+  "output": "<generated output>"
+}}
+
+---
+
+Now generate one example:
+"""
+
+    output_text = chat_complete(prompt)
+    match = re.search(r'\{.*\}', output_text, re.S)
+    if match:
+        json_str = match.group().strip()
+        try:
+            result = json.loads(json_str)
+            return result
+        except:
+            return {"input": None, "output": None}
+    else:
+        return {"input": None, "output": None}

@@ -4,8 +4,8 @@ from tqdm import tqdm
 import networkx as nx
 from pyvis.network import Network
 from hf_client import HFClient
-from hf_agent import keyword_extraction, instruction_judge, field_filter, solvable_judge
-from config import HUGGINGFACE_TOKEN, TASK_DESCRIPTION
+from data_agent import keyword_extraction, instruction_judge, field_filter, format_conversion, solvable_judge
+from config import HUGGINGFACE_TOKEN, TASK_DESCRIPTION, INPUT_FORMAT, OUTPUT_FORMAT
 
 logging.basicConfig(
     level=logging.INFO,  # 设置日志级别为 INFO
@@ -67,6 +67,14 @@ for task_keyword in tqdm(task_keywords, desc="🔍 Searching keywords", unit="ke
             sample_score = instruction_judge(TASK_DESCRIPTION, str(sample))
             # sample_solvable = solvable_judge(sample)
             sample["score"] = sample_score
+            
+            sample_formatted = format_conversion(sample["input"], sample["output"], INPUT_FORMAT, OUTPUT_FORMAT)
+            sample["formatted_input"] = sample_formatted["input"]
+            sample["formatted_output"] = sample_formatted["output"]
+
+            sample_formatted_score = instruction_judge(TASK_DESCRIPTION, str(sample_formatted))
+            sample["formatted_score"] = sample_formatted_score
+
             # sample["solvable"] = sample_solvable
             sample["solvable"] = "Unknown"
             samples.append(sample)
@@ -163,13 +171,13 @@ csv_filename = "dataset_summary.csv"
 with open(csv_filename, mode="w", encoding="utf-8", newline="") as f:
     writer = csv.writer(f)
     # 写入标题行
-    writer.writerow(["Task_Definition", "Keyword", "Dataset_ID", "Sample_Input", "Sample_Output", "Judge_Score", "Judge_Solvable"])
+    writer.writerow(["Task_Definition", "Keyword", "Dataset_ID", "Sample_Input", "Sample_Output", "Judge_Score", "Formatted_Input", "Formatted_Output", "Formatted_Score", "Judge_Solvable"])
 
     # 遍历 dataset_map 生成每一行
     for kw, datasets in dataset_map.items():
         for dataset in datasets:
             dataset_id = dataset["id"]
             for sample in dataset["samples"]:
-                writer.writerow([TASK_DESCRIPTION, kw, dataset_id, sample["input"], sample["output"], sample["score"], sample["solvable"]])
+                writer.writerow([TASK_DESCRIPTION, kw, dataset_id, sample["input"], sample["output"], sample["score"], sample["formatted_input"], sample["formatted_output"], sample["formatted_score"], sample["solvable"]])
 
 print(f"✅ CSV 文件已生成: {csv_filename}")
