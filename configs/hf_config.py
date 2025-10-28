@@ -1,7 +1,7 @@
-LLM_API_KEY = "sk-d1468a6c93894e66a510e89b39f68e85"
+LLM_API_KEY = "sk-"
 LLM_BASE_URL = "https://api.deepseek.com"
 LLM_MODEL = "deepseek-chat"
-HUGGINGFACE_TOKEN = "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"
+HUGGINGFACE_TOKEN = "hf_"
 
 TASK_DESCRIPTION = "You are given a word problem involving basic arithmetic, algebra, or geometry. Your task is to carefully read the problem and provide a step-by-step solution for it."
 
