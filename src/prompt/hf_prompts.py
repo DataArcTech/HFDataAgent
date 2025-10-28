@@ -1,10 +1,4 @@
-import re
-import ast
-import json
-from utils import chat_complete
-
-async def keyword_extraction(task_description):
-    prompt = f"""You can summarize the domain of the task into a few keywords. You can refer to these task examples:
+KEYWORD_EXTRACTION_PROMPT = """You can summarize the domain of the task into a few keywords. You can refer to these task examples:
 
 TASK_DESCRIPTION: "You are given a word problem involving basic arithmetic, algebra, or geometry. Your task is to carefully read the problem and provide a step-by-step solution for it."
 KEYWORDS: ["math reasoning", "arithmetic", "algebra", "geometry"]
@@ -16,20 +10,10 @@ TASK_DESCRIPTION: "Your task is to answer challenging, graduate-level multiple-c
 KEYWORDS: ["multiple choice", "Physics", "Chemistry", "Biology", "scientific reasoning", "complex reasoning", "calculation"]
 
 TASK_DESCRIPTION: "{task_description}"
-KEYWORDS: """
-    output = await chat_complete(prompt)
-    match = re.search(r'\[.*\]', output, re.S)
-    if match:
-        keywords = ast.literal_eval(match.group())
-    else:
-        keywords = [output.strip()]
-        
-    return keywords
+KEYWORDS:
+"""
 
-async def field_filter(row, legal_keys):
-    example_text = """{'question': 'If an angle measures 120 degrees, what is its reference angle?', 'answer': 'The reference angle is found by subtracting ...', 'topic': 'Trigonometry Basics'}"""
-    
-    prompt = f"""You are a data field identifier that determines which fields in a JSON-like object represent the instruction's input and output.
+FIELD_FILTER_PROMPT = """You are a data field identifier that determines which fields in a JSON-like object represent the instruction's input and output.
 
 Given a JSON structure or similar text, your task is to analyze its keys and contents to decide:
 - which field represents the **input** (the user's question, instruction, or request)
@@ -37,19 +21,19 @@ Given a JSON structure or similar text, your task is to analyze its keys and con
 
 ### Output format:
 Return a JSON object with two keys:
-{{
+{
   "input": "<name of the input field>",
   "output": "<name of the output field>"
-}}
+}
 
 ### Rules:
 1. Choose the field names that most likely correspond to the instruction (input) and answer (output).
 2. Only select from the provided legal keys.
 3. If you cannot identify clear input and output fields, return:
-   {{
+   {
      "input": null,
      "output": null
-   }}
+   }
 4. Do NOT infer or fabricate field names not present in the text.
 5. Only output the field names, not their contents.
 
@@ -58,28 +42,18 @@ Input: "{example_text}"
 Legal Keys: ["question", "answer", "topic"]
 
 Output:
-{{
+{
   "input": "question",
   "output": "answer"
-}}
+}
 
 Input: {row}
 Legal Keys: {legal_keys}
 
-Output:"""
+Output:
+"""
 
-    output = await chat_complete(prompt)
-    match = re.search(r'\{.*\}', output, re.S)
-    if match:
-        json_str = match.group().strip()
-        try:
-            result = json.loads(json_str)
-            return result
-        except:
-            return {"input": None, "output": None}
-
-async def format_conversion(input, output, input_format, output_format):
-    prompt = f"""You are a format conversion assistant that rewrites given input-output pairs from one format to another.
+FORMAT_CONVERSION_PROMPT = """You are a format conversion assistant that rewrites given input-output pairs from one format to another.
 
 ### Task
 You are given:
@@ -96,10 +70,10 @@ Your task:
 
 ### Output format
 Return only a JSON object:
-{{
+{
   "input": "<rewritten input>",
   "output": "<rewritten output>"
-}}
+}
 
 ---
 
@@ -117,22 +91,8 @@ Output Format:
 
 Return:
 """
-    
-    output_text = await chat_complete(prompt)
-    match = re.search(r'\{.*\}', output_text, re.S)
-    if match:
-        json_str = match.group().strip()
-        try:
-            result = json.loads(json_str)
-            return result
-        except:
-            return {"input": None, "output": None}
-    else:
-        return {"input": None, "output": None}
 
-
-async def instruction_judge(task_description, instruction_sample):
-    prompt = f"""You are an expert LLM evaluator for instruction-tuning datasets. Your goal is to assess how helpful and appropriate an instruction sample is for training a model on a specific task.
+INSTRUCTION_JUDGE_PROMPT = """You are an expert LLM evaluator for instruction-tuning datasets. Your goal is to assess how helpful and appropriate an instruction sample is for training a model on a specific task.
 You will be given:
 1. A **Task Definition** – describing the target task the model should learn.
 2. An **Instruction Sample** – containing an example instruction (and optionally a response).
@@ -185,13 +145,13 @@ You should evaluate the instruction sample across **five criteria**, using the d
 
 Return your evaluation in strict **JSON** format as follows:
 
-{{
+{
   "Relevance": "<0–10>",
   "Correctness": "<0–10>",
   "Helpfulness": "<0–10>",
   "Clarity": "<0–10>",
   "Difficulty": "<0–10>"
-}}
+}
 
 ---
 
@@ -207,36 +167,14 @@ Return your evaluation in strict **JSON** format as follows:
 
 ### Output
 """
-    output = await chat_complete(prompt)
-    match = re.search(r'\{.*\}', output, re.S)
-    if match:
-        json_str = match.group().strip()
-        try:
-            result = json.loads(json_str)
-            return result
-        except:
-            return {"Relevance": 5, "Correctness": 5, "Helpfulness": 5, "Clarity": 5, "Difficulty": 5}
-    else:
-        return {"Relevance": 5, "Correctness": 5, "Helpfulness": 5, "Clarity": 5, "Difficulty": 5}
 
-
-async def solvable_judge(instruction_sample):
-    solve_prompt = f"""Please think step by step and answer this question. \n{instruction_sample["input"]}"""
-    solution = await chat_complete(solve_prompt)
-    
-    judge_prompt = f"""Given the instruction sample below and the model's attempted solution, determine if the model successfully solved the problem.
+SOLVABLE_JUDGE_PROMPT = """Given the instruction sample below and the model's attempted solution, determine if the model successfully solved the problem.
 Instruction Sample: {instruction_sample}
 Model's Solution: {solution}
-Return "True" if the model solved it correctly, otherwise return "False"."""
-    judge_output = await chat_complete(judge_prompt).strip()
-    
-    if "true" in judge_output.lower():
-        return True
-    else:
-        return False
-    
-async def data_generator_zero_shot(task_description, input_format, output_format):
-    prompt = f"""You are a data generation assistant that creates realistic and high-quality instruction data for fine-tuning language models.
+Return "True" if the model solved it correctly, otherwise return "False".
+"""
+
+DATA_GENERATOR_ZERO_SHOT_PROMPT = """You are a data generation assistant that creates realistic and high-quality instruction data for fine-tuning language models.
 
 ### Task
 Generate a **single** input-output pair based on the following description and format rules.
@@ -259,35 +197,17 @@ Generate a **single** input-output pair based on the following description and f
 2. The **input** should follow the input format and represent a valid instruction or question for this task.
 3. The **output** should follow the output format and be a correct, helpful, and complete response to the input.
 4. Return only the final JSON object in this format:
-{{
+{
   "input": "<generated input>",
   "output": "<generated output>"
-}}
+}
 
 ---
 
 Now generate one example:
 """
 
-    output_text = await chat_complete(prompt)
-
-    match = re.search(r'\{.*\}', output_text, re.S)
-    if match:
-        json_str = match.group().strip()
-        try:
-            result = json.loads(json_str)
-            return result
-        except:
-            return {"input": None, "output": None}
-    else:
-        return {"input": None, "output": None}
-
-async def data_generator_few_shot(task_description, input_format, output_format, examples):
-    example_text = "\n\n".join(
-        [f"Example {i+1}:\nInput: {ex['input']}\nOutput: {ex['output']}" for i, ex in enumerate(examples)]
-    )
-
-    prompt = f"""
+DATA_GENERATOR_FEW_SHOT_PROMPT = """
 You are a data generation assistant that creates diverse, realistic, and high-quality instruction data for fine-tuning large language models.
 
 ### Task
@@ -315,24 +235,12 @@ Generate a **single** input-output pair based on the task description and few-sh
 3. Keep **semantic consistency** with the task, but introduce diversity in topic, difficulty, or structure.
 4. The input and output must both follow the described formats.
 5. Return only the final JSON object in this format:
-{{
+{
   "input": "<generated input>",
   "output": "<generated output>"
-}}
+}
 
 ---
 
 Now generate one example:
 """
-
-    output_text = await chat_complete(prompt)
-    match = re.search(r'\{.*\}', output_text, re.S)
-    if match:
-        json_str = match.group().strip()
-        try:
-            result = json.loads(json_str)
-            return result
-        except:
-            return {"input": None, "output": None}
-    else:
-        return {"input": None, "output": None}

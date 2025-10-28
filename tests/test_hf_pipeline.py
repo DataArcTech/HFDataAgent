@@ -4,17 +4,20 @@ import time
 import logging
 import asyncio
 from tqdm import tqdm
-import networkx as nx
-from pyvis.network import Network
-from hf_client import HFClient
-from data_agent import keyword_extraction, instruction_judge, field_filter, format_conversion, data_generator_few_shot, data_generator_zero_shot
-from config import HUGGINGFACE_TOKEN, TASK_DESCRIPTION, INPUT_FORMAT, OUTPUT_FORMAT
+
+from src.utils.hf_client import HFClient
+from src.huggingface.hf_crawl import keyword_extraction, instruction_judge, field_filter, format_conversion, data_generator_few_shot, data_generator_zero_shot
+
+from configs.hf_config import LLM_API_KEY, LLM_BASE_URL, HUGGINGFACE_TOKEN, TASK_DESCRIPTION, INPUT_FORMAT, OUTPUT_FORMAT
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%H:%M:%S"
 )
+
+os.environ["OPENAI_API_KEY"] = LLM_API_KEY
+os.environ["OPENAI_BASE_URL"] = LLM_BASE_URL
 
 async def hf_data_crawl(task_description, client, task_datasets_count=5, task_data_samples=5):
     # 提取任务关键词
